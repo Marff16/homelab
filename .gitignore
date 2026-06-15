@@ -6,6 +6,10 @@
 # Runtime data — certs, app state, backups
 /data/
 
+# Generated dashboard API data (written by services/status-collector/collect.py)
+apps/dashboard/public/homelab/api/status.json
+apps/dashboard/public/homelab/api/config.json
+
 # Noise
 *.log
 .DS_Store

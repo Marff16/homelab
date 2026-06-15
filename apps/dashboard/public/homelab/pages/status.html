@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Homelab · Status</title>
+  <link rel="icon" href="data:," />
+  <!-- apply the saved animation preference before first paint to avoid a flash -->
+  <script>
+    if (localStorage.getItem('homelab-anim') === 'off')
+      document.documentElement.classList.add('no-anim');
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:     #f5f0e8;
+      --bg2:    #ede8de;
+      --border: #d6cec3;
+      --text:   #28201a;
+      --muted:  #7a6d62;
+      --accent: #b85c38;
+      --green:  #5a7d50;
+      --radius: 10px;
+      --font:   'Inter', system-ui, sans-serif;
+      --head:   'Space Grotesk', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { overflow-x: hidden; background: var(--bg); }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      animation: fade-in 0.25s ease backwards;
+    }
+
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+    body.fade-out { opacity: 0; transition: opacity 0.25s ease; }
+
+    .no-anim, .no-anim *, .no-anim *::before, .no-anim *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body { animation: none; }
+      body.fade-out { transition: none; }
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ---- Top navigation ---- */
+    .topnav {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 1rem;
+      padding: 1.1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    /* centred date + weekday + time (no seconds) */
+    .topclock {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-family: var(--head);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--muted);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .topclock .tc-short { display: none; }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-family: var(--head);
+      font-weight: 700;
+      font-size: 1.4rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .logo svg {
+      width: 1.35rem;
+      height: 1.35rem;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .logo .dot { color: var(--accent); }
+
+    /* ---- Menu button + sidebar ---- */
+    .menu-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    .menu-btn:hover { border-color: var(--accent); }
+    .menu-btn svg { width: 1.3rem; height: 1.3rem; }
+
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(40, 32, 26, 0.35);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+      z-index: 40;
+    }
+    .backdrop.open { opacity: 1; visibility: visible; }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 280px;
+      max-width: 82vw;
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(.4, 0, .2, 1);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem;
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .sidebar-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .sidebar-close:hover { background: var(--bg2); color: var(--text); }
+    .sidebar-close svg { width: 1.2rem; height: 1.2rem; }
+    .menu-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0.25rem 0 0.5rem 0.8rem;
+    }
+    .sidebar nav { display: flex; flex-direction: column; gap: 0.2rem; }
+    .sidebar nav a {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.7rem 0.8rem;
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .sidebar nav a:hover { background: var(--bg2); color: var(--text); }
+    .sidebar nav a.active { background: var(--bg2); color: var(--accent); }
+    .sidebar nav a svg { width: 1.2rem; height: 1.2rem; flex-shrink: 0; }
+
+    /* ---- Main ---- */
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 2rem 2rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .page-head h1 {
+      font-family: var(--head);
+      font-size: clamp(1.8rem, 4vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+    .updated { font-size: 0.8rem; color: var(--muted); }
+
+    /* ---- Network map ---- */
+    .map {
+      position: relative;
+      width: 100%;
+      max-width: 560px;
+      aspect-ratio: 1;
+      margin: 0.5rem auto 0;
+      flex: 1;
+    }
+    .tethers {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .tethers line {
+      stroke: var(--border);
+      stroke-width: 2;
+      stroke-dasharray: 5 5;
+      animation: flow 1.4s linear infinite;
+    }
+    @keyframes flow { to { stroke-dashoffset: -20; } }
+
+    /* a node is anchored by its badge centre; labels float below it */
+    .node {
+      position: absolute;
+      transform: translate(-50%, -50%);
+    }
+    .node .labels {
+      position: absolute;
+      top: calc(100% + 0.45rem);
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* center = the local network */
+    .hub .badge {
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hub .badge svg { width: 38px; height: 38px; }
+    .hub .label { font-family: var(--head); font-weight: 700; font-size: 0.92rem; }
+    .hub .sub { font-size: 0.72rem; color: var(--muted); margin-top: -0.25rem; }
+
+    /* device nodes */
+    .dev .badge {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      position: relative;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .dev .badge:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .dev .badge svg { width: 30px; height: 30px; }
+    .dev.offline .badge { opacity: 0.5; }
+    .dev .status {
+      position: absolute;
+      right: -3px; top: -3px;
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      background: var(--muted);
+      border: 2px solid var(--bg);
+    }
+    .dev.online .status { background: var(--green); }
+    .dev .name { font-weight: 500; font-size: 0.85rem; }
+    .dev .meta { font-size: 0.72rem; color: var(--muted); margin-top: -0.2rem; }
+
+    .empty {
+      margin: auto;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* ---- Bottom navigation ---- */
+    .bottomnav {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.6rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .bottomnav .anim-toggle {
+      position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%);
+    }
+    .bottomnav a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.5rem 1.2rem;
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 500;
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+    .bottomnav a:hover { color: var(--text); background: var(--bg2); }
+    .bottomnav a.active { color: var(--accent); }
+    .bottomnav svg { width: 1.3rem; height: 1.3rem; }
+
+    /* ---- Animations toggle ---- */
+    .anim-toggle {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      font-size: 0.78rem; color: var(--muted); cursor: pointer;
+      user-select: none; white-space: nowrap;
+    }
+    .anim-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .anim-toggle .track {
+      position: relative; width: 34px; height: 18px; border-radius: 999px;
+      background: var(--border); transition: background 0.2s ease;
+    }
+    .anim-toggle .thumb {
+      position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+      border-radius: 50%; background: #fff; transition: transform 0.2s ease;
+    }
+    .anim-toggle input:checked + .track { background: var(--accent); }
+    .anim-toggle input:checked + .track .thumb { transform: translateX(16px); }
+    .anim-toggle input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    @media (max-width: 560px) {
+      .top-links a { padding: 0.45rem 0.6rem; }
+      .topnav { padding: 1rem 1.2rem; }
+      .topclock { font-size: 0.7rem; }
+      .topclock .tc-full { display: none; }
+      .topclock .tc-short { display: inline; }
+      main { padding: 1.5rem 1rem 2rem; }
+      .hub .badge { width: 76px; height: 76px; }
+      .hub .badge svg { width: 32px; height: 32px; }
+      .dev .badge { width: 54px; height: 54px; border-radius: 15px; }
+      .dev .badge svg { width: 26px; height: 26px; }
+
+      .bottomnav { flex-wrap: wrap; gap: 0; padding: 0; }
+      .bottomnav a { flex: 1; padding: 0.55rem 0.25rem; font-size: 0.66rem; gap: 0.3rem; }
+      .bottomnav svg { width: 1.2rem; height: 1.2rem; }
+      .bottomnav .anim-toggle {
+        position: static; transform: none; order: -1; width: 100%;
+        justify-content: center; padding: 0.6rem; border-bottom: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topnav">
+    <button class="menu-btn" id="menu-btn" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a class="logo" href="/homelab/landing">Homelab<span class="dot">.</span></a>
+    <div class="topclock">
+      <span class="tc-full" id="tc-full"></span>
+      <span class="tc-short" id="tc-short"></span>
+    </div>
+  </header>
+
+  <div class="backdrop" id="backdrop"></div>
+  <aside class="sidebar" id="sidebar" aria-hidden="true">
+    <div class="sidebar-head">
+      <a class="logo" href="/homelab/landing">Homelab<span class="dot">.</span></a>
+      <button class="sidebar-close" id="sidebar-close" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="menu-label">Menu</div>
+    <nav>
+      <a href="/homelab/dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Overview
+      </a>
+      <a class="active" href="/homelab/status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/></svg>
+        Status
+      </a>
+      <a href="/homelab/dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></svg>
+        Services
+      </a>
+      <a href="/homelab/dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <h1>Network</h1>
+      <span class="updated" id="updated">Loading…</span>
+    </div>
+    <div class="map" id="map"></div>
+  </main>
+
+  <nav class="bottomnav">
+    <a href="/homelab/dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Overview
+    </a>
+    <a href="/homelab/dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a class="leave" href="/homelab/landing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.6v15.8a1 1 0 0 1-1.2 1L5 20V5.6a2 2 0 0 1 1.5-1.9l4-1A2 2 0 0 1 13 4.6Z"/></svg>
+      Step Outside
+    </a>
+    <label class="anim-toggle">
+      <input type="checkbox" id="anim" />
+      <span class="track"><span class="thumb"></span></span>
+      Animations
+    </label>
+  </nav>
+
+  <script>
+    // ---- Top clock: date, weekday, time (no seconds) ----
+    const tcFull = document.getElementById('tc-full');
+    const tcShort = document.getElementById('tc-short');
+    const tickTop = () => {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      tcFull.textContent =
+        now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }) + ' · ' + time;
+      tcShort.textContent =
+        now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + time;
+    };
+    tickTop();
+    setInterval(tickTop, 1000);
+
+    // ---- Sidebar menu ----
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('backdrop');
+    const menuBtn = document.getElementById('menu-btn');
+    const openMenu = () => {
+      sidebar.classList.add('open'); backdrop.classList.add('open');
+      menuBtn.setAttribute('aria-expanded', 'true'); sidebar.setAttribute('aria-hidden', 'false');
+    };
+    const closeMenu = () => {
+      sidebar.classList.remove('open'); backdrop.classList.remove('open');
+      menuBtn.setAttribute('aria-expanded', 'false'); sidebar.setAttribute('aria-hidden', 'true');
+    };
+    menuBtn.addEventListener('click', openMenu);
+    backdrop.addEventListener('click', closeMenu);
+    document.getElementById('sidebar-close').addEventListener('click', closeMenu);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+
+    // ---- Animations toggle ----
+    const ANIM_KEY = 'homelab-anim';
+    const toggle = document.getElementById('anim');
+    const animOn = () => localStorage.getItem(ANIM_KEY) !== 'off';
+    toggle.checked = animOn();
+    toggle.addEventListener('change', () => {
+      localStorage.setItem(ANIM_KEY, toggle.checked ? 'on' : 'off');
+      document.documentElement.classList.toggle('no-anim', !toggle.checked);
+    });
+
+    // ---- Fade-out on "Step Outside" ----
+    const leave = document.querySelector('.leave');
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const skipAnim = () => reduce || !animOn();
+    window.addEventListener('pageshow', () => document.body.classList.remove('fade-out'));
+    leave.addEventListener('click', (e) => {
+      if (skipAnim()) return;
+      e.preventDefault();
+      document.body.classList.add('fade-out');
+      setTimeout(() => { window.location.href = leave.getAttribute('href'); }, 250);
+    });
+
+    // ---- Helpers ----
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const ago = (iso) => {
+      const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+      return `${Math.floor(s / 3600)} h ago`;
+    };
+    const OS_LABEL = { linux: 'Linux', iOS: 'iOS', macOS: 'macOS', windows: 'Windows', android: 'Android' };
+
+    // device-type icons (24x24 stroked)
+    const ICONS = {
+      pc: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+      laptop: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M2 20h20"/>',
+      phone: '<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
+      tablet: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11.5 18h1"/>',
+    };
+    const HUB_ICON = '<path d="M5 12.55a11 11 0 0 1 14 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/>';
+    const devSvg = (kind) =>
+      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[kind] || ICONS.pc}</svg>`;
+
+    // node positions (% of the square map) around the centre, by device count
+    const RADIUS = 36;            // distance from centre
+    const START = {               // starting angle (deg) per count, for nice shapes
+      1: -90,                     // single device on top
+      2: 180,                     // two: left & right ("next to each")
+      3: -90,                     // triangle, point up
+      4: -45,                     // square, on its corners
+      5: -90,                     // pentagon, point up
+    };
+    function positions(n) {
+      if (n === 0) return [];
+      const start = (START[n] !== undefined ? START[n] : -90) * Math.PI / 180;
+      const pts = [];
+      for (let i = 0; i < n; i++) {
+        const a = start + i * (2 * Math.PI / n);
+        pts.push([50 + RADIUS * Math.cos(a), 50 + RADIUS * Math.sin(a)]);
+      }
+      return pts;
+    }
+
+    const map = document.getElementById('map');
+
+    function render(d) {
+      const devices = d.devices;
+      document.getElementById('updated').textContent =
+        d.generated_at ? `Updated ${ago(d.generated_at)}` : '';
+
+      if (devices === null) {
+        map.innerHTML = '<div class="empty">Network data unavailable.</div>';
+        return;
+      }
+      if (!devices.length) {
+        map.innerHTML = '<div class="empty">No devices on the network.</div>';
+        return;
+      }
+
+      const pts = positions(devices.length);
+      const net = esc(d.network || 'tailnet');
+
+      // device nodes (badge centred on its point, labels float below)
+      const nodes = devices.map((dev, i) => {
+        const [x, y] = pts[i];
+        return `
+          <div class="node dev ${dev.online ? 'online' : 'offline'}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%">
+            <div class="badge">${devSvg(dev.kind)}<span class="status"></span></div>
+            <div class="labels">
+              <div class="name">${esc(dev.name)}</div>
+              <div class="meta">${esc(OS_LABEL[dev.os] || dev.os || '')}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      map.innerHTML = `
+        <svg class="tethers" id="tethers"></svg>
+        <div class="node hub" style="left:50%;top:50%">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${HUB_ICON}</svg></div>
+          <div class="labels">
+            <div class="label">${net}</div>
+            <div class="sub">local network</div>
+          </div>
+        </div>
+        ${nodes}`;
+
+      lastDevices = devices;
+      drawTethers();
+    }
+
+    // draw tethers in pixel space so they meet the icon edges exactly and
+    // only connect devices that are currently online
+    function drawTethers() {
+      const svg = document.getElementById('tethers');
+      if (!svg || !lastDevices) return;
+      const mapRect = map.getBoundingClientRect();
+      const W = mapRect.width, H = mapRect.height;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+      const centre = (el) => {
+        const r = el.getBoundingClientRect();
+        return { x: r.left - mapRect.left + r.width / 2, y: r.top - mapRect.top + r.height / 2, r: r.width / 2 };
+      };
+      const hub = centre(map.querySelector('.hub .badge'));
+      const devNodes = map.querySelectorAll('.dev');
+      const gap = 6;
+      let lines = '';
+      lastDevices.forEach((dev, i) => {
+        if (!dev.online) return;                       // offline → no tether
+        const c = centre(devNodes[i].querySelector('.badge'));
+        const dx = c.x - hub.x, dy = c.y - hub.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const ux = dx / dist, uy = dy / dist;
+        const x1 = hub.x + ux * (hub.r + gap), y1 = hub.y + uy * (hub.r + gap);
+        const x2 = c.x - ux * (c.r + gap), y2 = c.y - uy * (c.r + gap);
+        lines += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" />`;
+      });
+      svg.innerHTML = lines;
+    }
+
+    let lastDevices = null;
+
+    async function refresh() {
+      try {
+        const r = await fetch('/homelab/api/status.json', { cache: 'no-store' });
+        if (!r.ok) throw new Error(r.status);
+        render(await r.json());
+      } catch (e) {
+        document.getElementById('updated').textContent = 'Status data unavailable';
+      }
+    }
+    window.addEventListener('resize', drawTethers);
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>
