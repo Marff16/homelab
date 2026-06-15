@@ -1,11 +1,10 @@
 # Secrets — never committed
 .env
 **/.env
+!.env.example
 
-# Runtime data lives outside the repo
+# Runtime data — certs, app state, backups
 /data/
-/apps/
-/backups/
 
 # Noise
 *.log

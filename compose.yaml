@@ -4,11 +4,11 @@ services:
     env_file: .env
     networks: [edge]
     ports:
-      - "100.68.60.108:80:80"
-      - "100.68.60.108:443:443"
+      - "${TAILSCALE_IP}:80:80"
+      - "${TAILSCALE_IP}:443:443"
     volumes:
       - ./services/proxy/Caddyfile:/etc/caddy/Caddyfile:ro,z
-      - ${APPS_ROOT}/proxy:/data:z
+      - ./data/proxy:/data:z
     restart: unless-stopped
 
   dashboard:
