@@ -1,0 +1,4 @@
+fedora.tail86b478.ts.net {
+    tls /data/fedora.crt /data/fedora.key
+    reverse_proxy dashboard:80
+}

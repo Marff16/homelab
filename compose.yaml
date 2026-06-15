@@ -1,0 +1,24 @@
+services:
+  proxy:
+    image: docker.io/library/caddy:alpine@sha256:77c07d5ebfa5be9fd6c820d2094ae662c9e7eeb9bf98346b7f639900263ee2a2
+    env_file: .env
+    networks: [edge]
+    ports:
+      - "100.68.60.108:80:80"
+      - "100.68.60.108:443:443"
+    volumes:
+      - ./services/proxy/Caddyfile:/etc/caddy/Caddyfile:ro,z
+      - ${APPS_ROOT}/proxy:/data:z
+    restart: unless-stopped
+
+  dashboard:
+    image: docker.io/library/nginx:alpine@sha256:8b1e78743a03dbb2c95171cc58639fef29abc8816598e27fb910ed2e621e589a
+    env_file: .env
+    networks: [edge]
+    volumes:
+      - ./services/dashboard/site:/usr/share/nginx/html:ro,z
+    restart: unless-stopped
+
+networks:
+  edge:
+    name: edge

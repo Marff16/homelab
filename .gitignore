@@ -1,0 +1,12 @@
+# Secrets — never committed
+.env
+**/.env
+
+# Runtime data lives outside the repo
+/data/
+/apps/
+/backups/
+
+# Noise
+*.log
+.DS_Store
