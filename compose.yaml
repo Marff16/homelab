@@ -9,7 +9,7 @@ services:
     volumes:
       - ./services/proxy/Caddyfile:/etc/caddy/Caddyfile:ro,z
       - ./data/proxy:/data:z
-    restart: unless-stopped
+    restart: always
 
   dashboard:
     image: docker.io/library/nginx:alpine@sha256:8b1e78743a03dbb2c95171cc58639fef29abc8816598e27fb910ed2e621e589a
@@ -18,7 +18,7 @@ services:
     volumes:
       - ./apps/dashboard/public:/usr/share/nginx/html:ro,z
       - ./apps/dashboard/nginx.conf:/etc/nginx/conf.d/default.conf:ro,z
-    restart: unless-stopped
+    restart: always
 
 networks:
   edge:
